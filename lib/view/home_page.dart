@@ -1,10 +1,12 @@
+import 'package:base_todolist/model/todo.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:base_todolist/main.dart';
 import 'package:base_todolist/model/item_list.dart'; // Import the file where your ItemList widget is defined
 import 'login_page.dart';
-import 'register_page.dart'; // Import the file where your RegisterPage widget is defined
+import 'register_page.dart';// Import the file where your RegisterPage widget is defined
+
+import 'package:flutter/material.dart';
 
 class _HomePageState extends State<HomePage> {
   FirebaseAuth _auth = FirebaseAuth.instance;
@@ -14,83 +16,145 @@ class _HomePageState extends State<HomePage> {
   TextEditingController _descriptionController = TextEditingController();
   TextEditingController _searchController = TextEditingController();
   bool isComplete = false;
+  const _HomePageState({super.key});
 
-  // Add a loading indicator for addTodo
-  bool _addingTodo = false;
-
-  // ... (existing functions)
-
-  Future<void> addTodo() async {
-    setState(() {
-      _addingTodo = true;
-    });
-
-    try {
-      await todoCollection.add({
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'isComplete': isComplete,
-        'uid': _auth.currentUser!.uid,
-      });
-      getTodo();
-    } catch (error) {
-      final snackbar = SnackBar(content: Text("Error: $error"));
-      ScaffoldMessenger.of(context).showSnackBar(snackbar);
-    } finally {
-      setState(() {
-        _addingTodo = false;
-      });
-    }
+    Future<void> _signOut() async {
+    await _auth.signOut();
+    runApp(new MaterialApp(
+      home: new LoginPage(),
+    ));
   }
 
-  // ... (existing code)
+    Future<QuerySnapshot>? searchResultsFuture;
+  Future<void> searchResult(String textEntered) async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection("Todos")
+        .where("title", isGreaterThanOrEqualTo: textEntered)
+        .where("title", isLessThan: textEntered + 'z')
+        .get();
+
+    setState(() {
+      searchResultsFuture = Future.value(querySnapshot);
+    });
+  }
+
+  void cleartext() {
+    _titleController.clear();
+    _descriptionController.clear();
+  }
+
+  Future<void> addTodo() {
+      return todoCollection.add({
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'isComplete': isComplete,
+        'uid': _auth.currentUser!.uid,
+        // ignore: invalid_return_type_for_catch_error
+      }).catchError((error) => print('Failed to add todo: $error'));
+    }
+
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getTodo();
+  }
+  
 
   @override
   Widget build(BuildContext context) {
     CollectionReference todoCollection = _firestore.collection('Todos');
     final User? user = _auth.currentUser;
-
     return Scaffold(
       appBar: AppBar(
-          // ... (existing code)
-          ),
+        automaticallyImplyLeading: false,
+        title: Text('Todo List'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Logout'),
+                  content: Text('Apakah anda yakin ingin logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text('Tidak'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _signOut();
+                      },
+                      child: Text('Ya'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        ],
+      ),
       body: Column(
         children: [
-          // ... (existing code)
-          Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _searchController.text.isEmpty
-                  ? _firestore
-                      .collection('Todos')
-                      .where('uid', isEqualTo: user!.uid)
-                      .snapshots()
-                  : searchResultsFuture != null
-                      ? searchResultsFuture!
-                          .asStream()
-                          .cast<QuerySnapshot<Map<String, dynamic>>>()
-                      : Stream.empty(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+            child: TextField(
+              decoration: InputDecoration(
+                  labelText: 'Search',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder()),
+              onChanged: (textEntered) {
+                searchResult(textEntered);
 
-                List<Todo> listTodo = snapshot.data!.docs.map((document) {
-                  final data = document.data();
-                  // ... (existing code)
-                }).toList();
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: listTodo.length,
-                  itemBuilder: (context, index) {
-                    return ItemList(
-                      todo: listTodo[index],
-                      transaksiDocId: snapshot.data!.docs[index].id,
-                    );
-                  },
-                );
+                setState(() {
+                  _searchController.text = textEntered;
+                });
               },
             ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _searchController.text.isEmpty
+                    ? _firestore
+                        .collection('Todos')
+                        .where('uid', isEqualTo: user!.uid)
+                        .snapshots()
+                    : searchResultsFuture != null
+                        ? searchResultsFuture!
+                            .asStream()
+                            .cast<QuerySnapshot<Map<String, dynamic>>>()
+                        : Stream.empty(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  List<Todo> listTodo = snapshot.data!.docs.map((document) {
+                    final data = document.data();
+                    final String title = data['title'];
+                    final String description = data['description'];
+                    final bool isComplete = data['isComplete'];
+                    final String uid = user!.uid;
+
+                    return Todo(
+                        description: description,
+                        title: title,
+                        isComplete: isComplete,
+                        uid: uid);
+                  }).toList();
+                  return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: listTodo.length,
+                      itemBuilder: (context, index) {
+                        return ItemList(
+                          todo: listTodo[index],
+                          transaksiDocId: snapshot.data!.docs[index].id,
+                        );
+                      });
+                }),
           ),
         ],
       ),
@@ -121,16 +185,13 @@ class _HomePageState extends State<HomePage> {
                   child: Text('Batalkan'),
                   onPressed: () => Navigator.pop(context),
                 ),
-                // Disable the button or show loading indicator while adding todo
-                ElevatedButton(
-                  onPressed: _addingTodo
-                      ? null
-                      : () {
-                          addTodo();
-                          cleartext();
-                          Navigator.pop(context);
-                        },
+                TextButton(
                   child: Text('Tambah'),
+                  onPressed: () {
+                    addTodo();
+                    cleartext();
+                    Navigator.pop(context);
+                  },
                 ),
               ],
             ),
@@ -138,6 +199,11 @@ class _HomePageState extends State<HomePage> {
         },
         child: Icon(Icons.add),
       ),
-    );
+    )
+    
+
+    
+    }
   }
 }
+

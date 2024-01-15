@@ -7,16 +7,10 @@ class ItemList extends StatelessWidget {
   final Todo todo;
 
   const ItemList({
-    Key? key,
+    super.key,
     required this.transaksiDocId,
     required this.todo,
-  }) : super(key: key);
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final CollectionReference todoCollection =
-      FirebaseFirestore.instance.collection('Todos');
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  });
 
   Future<void> deleteTodo() async {
     await todoCollection.doc(transaksiDocId).delete();
@@ -32,6 +26,11 @@ class ItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    CollectionReference todoCollection =
+        FirebaseFirestore.instance.collection('Todos');
+    TextEditingController _titleController = TextEditingController();
+    TextEditingController _descriptionController = TextEditingController();
     return GestureDetector(
       onTap: () {
         showDialog(
