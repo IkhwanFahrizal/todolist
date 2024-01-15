@@ -1,27 +1,21 @@
 import 'package:base_todolist/view/login_page.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _usernameController.dispose();
-    super.dispose();
-  }
 
   void toLogin() {
     Navigator.push(context, MaterialPageRoute(builder: (context) {
@@ -29,7 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }));
   }
 
-  Future<void> addUser(String username, String email, String password) async {
+  Future addUser(String username, String email, String password) async {
     await FirebaseFirestore.instance.collection('Users').add({
       'username': username,
       'email': email,
@@ -37,29 +31,27 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-  Future<void> register() async {
+  Future register() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final email = _emailController.text.trim();
+      final email = _emailController.text;
       final password = _passwordController.text;
-      final username = _usernameController.text.trim();
+      final username = _usernameController.text;
 
       if (email.isEmpty || password.isEmpty || username.isEmpty) {
-        throw ("Please fill in all the fields");
+        throw ('Please fill all the fields');
+      } else {
+        if (password.length < 6) {
+          throw ('Passord must be at least  characters');
+        } else {
+          await _auth.createUserWithEmailAndPassword(
+              email: email, password: password);
+          await addUser(username, email, password);
+        }
       }
-
-      if (password.length < 6) {
-        throw ("Password must be at least 6 characters");
-      }
-
-      // Additional password validation can be added here
-
-      await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
-      await addUser(username, email, password);
     } catch (error) {
       final snackBar = SnackBar(content: Text("Error: ${error.toString()}"));
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -74,37 +66,40 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
+                  const Text(
                     'Welcome',
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
+                  const Text(
                     'User',
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(
+                    height: 10,
+                  ),
                   const Text(
                     'Sign in to continue',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(
+                    height: 10,
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         vertical: 10, horizontal: 10),
@@ -149,27 +144,31 @@ class _RegisterPageState extends State<RegisterPage> {
                       style: TextStyle(fontSize: 16),
                     ),
                     TextButton(
-                      onPressed: toLogin,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginPage(),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ]),
                   ElevatedButton(
+                    //size
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                     onPressed: register,
                     child: const Text(
                       'Register',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 10),

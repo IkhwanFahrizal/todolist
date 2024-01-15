@@ -1,12 +1,16 @@
-import 'package:base_todolist/model/todo.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:base_todolist/model/item_list.dart';
+import 'package:base_todolist/view/login_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:base_todolist/model/item_list.dart'; // Import the file where your ItemList widget is defined
-import 'login_page.dart';
-import 'register_page.dart';// Import the file where your RegisterPage widget is defined
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../model/todo.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
 
 class _HomePageState extends State<HomePage> {
   FirebaseAuth _auth = FirebaseAuth.instance;
@@ -16,16 +20,15 @@ class _HomePageState extends State<HomePage> {
   TextEditingController _descriptionController = TextEditingController();
   TextEditingController _searchController = TextEditingController();
   bool isComplete = false;
-  const _HomePageState({super.key});
 
-    Future<void> _signOut() async {
+  Future<void> _signOut() async {
     await _auth.signOut();
     runApp(new MaterialApp(
       home: new LoginPage(),
     ));
   }
 
-    Future<QuerySnapshot>? searchResultsFuture;
+  Future<QuerySnapshot>? searchResultsFuture;
   Future<void> searchResult(String textEntered) async {
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
         .collection("Todos")
@@ -43,7 +46,17 @@ class _HomePageState extends State<HomePage> {
     _descriptionController.clear();
   }
 
-  Future<void> addTodo() {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CollectionReference todoCollection = _firestore.collection("Todos");
+    final User? user = _auth.currentUser;
+
+    Future<void> addTodo() {
       return todoCollection.add({
         'title': _titleController.text,
         'description': _descriptionController.text,
@@ -53,17 +66,6 @@ class _HomePageState extends State<HomePage> {
       }).catchError((error) => print('Failed to add todo: $error'));
     }
 
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    getTodo();
-  }
-  
-
-  @override
-  Widget build(BuildContext context) {
-    CollectionReference todoCollection = _firestore.collection('Todos');
-    final User? user = _auth.currentUser;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -151,7 +153,7 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context, index) {
                         return ItemList(
                           todo: listTodo[index],
-                          transaksiDocId: snapshot.data!.docs[index].id,
+                          transactionDocId: snapshot.data!.docs[index].id,
                         );
                       });
                 }),
@@ -199,11 +201,6 @@ class _HomePageState extends State<HomePage> {
         },
         child: Icon(Icons.add),
       ),
-    )
-    
-
-    
-    }
+    );
   }
 }
-

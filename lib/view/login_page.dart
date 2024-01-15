@@ -1,26 +1,21 @@
-import 'package:base_todolist/model/todo.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({Key? key});
+
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   void toRegister() {
     Navigator.push(context, MaterialPageRoute(builder: (context) {
@@ -34,23 +29,21 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-
+      final navigator = Navigator.of(context);
+      final email = _emailController.text;
+      final password = _passwordController.text;
       if (email.isEmpty || password.isEmpty) {
-        throw ("Please fill in all the fields");
+        throw ("please fill all the fields");
       } else {
         await _auth.signInWithEmailAndPassword(
             email: email, password: password);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  HomePage()), // Replace HomePage with your actual home page
-        );
+        navigator.pushReplacement(MaterialPageRoute(builder: (context) {
+          return HomePage();
+        }));
       }
     } catch (e) {
-      final snackbar = SnackBar(content: Text("Error: ${e.toString()}"));
+      final snackbar = SnackBar(content: Text(e.toString()));
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     } finally {
       setState(() {
@@ -144,6 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                   ElevatedButton(
+                    //size
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                     ),

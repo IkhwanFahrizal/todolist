@@ -1,36 +1,32 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'todo.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ItemList extends StatelessWidget {
-  final String transaksiDocId;
+  final String transactionDocId;
   final Todo todo;
-
-  const ItemList({
-    super.key,
-    required this.transaksiDocId,
-    required this.todo,
-  });
-
-  Future<void> deleteTodo() async {
-    await todoCollection.doc(transaksiDocId).delete();
-  }
-
-  Future<void> updateTodo() async {
-    await todoCollection.doc(transaksiDocId).update({
-      'title': _titleController.text,
-      'description': _descriptionController.text,
-      'isComplete': false,
-    });
-  }
+  const ItemList(
+      {super.key, required this.todo, required this.transactionDocId});
 
   @override
   Widget build(BuildContext context) {
     FirebaseFirestore _firestore = FirebaseFirestore.instance;
-    CollectionReference todoCollection =
-        FirebaseFirestore.instance.collection('Todos');
+    CollectionReference todoCollection = _firestore.collection('Todos');
     TextEditingController _titleController = TextEditingController();
     TextEditingController _descriptionController = TextEditingController();
+
+    Future<void> deleteTodo() async {
+      await _firestore.collection('Todos').doc(transactionDocId).delete();
+    }
+
+    Future updateTodo() async {
+      await _firestore.collection('Todos').doc(transactionDocId).update({
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'isComplete': false,
+      });
+    }
+
     return GestureDetector(
       onTap: () {
         showDialog(
@@ -41,14 +37,20 @@ class ItemList extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: _titleController..text = todo.title ?? '',
+                  controller:
+                      // ignore: unnecessary_null_comparison
+                      todo.title == null ? _titleController : _titleController
+                        ..text = todo.title,
                   decoration: InputDecoration(
                     hintText: 'Title',
                   ),
                 ),
                 TextField(
-                  controller: _descriptionController
-                    ..text = todo.description ?? '',
+                  // ignore: unnecessary_null_comparison
+                  controller: todo.description == null
+                      ? _descriptionController
+                      : _descriptionController
+                    ..text = todo.description,
                   decoration: InputDecoration(
                     hintText: 'Description',
                   ),
@@ -57,7 +59,7 @@ class ItemList extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                child: const Text('Cancel'),
+                child: const Text('Batalkan'),
                 onPressed: () => Navigator.pop(context),
               ),
               TextButton(
@@ -94,7 +96,7 @@ class ItemList extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    todo.title ?? '',
+                    todo.title,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -102,7 +104,7 @@ class ItemList extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
                   Text(
-                    todo.description ?? '',
+                    todo.description,
                     style: const TextStyle(
                       fontSize: 16,
                     ),
@@ -119,13 +121,13 @@ class ItemList extends StatelessWidget {
                 color: todo.isComplete ? Colors.blue : Colors.grey,
               ),
               onPressed: () {
-                todoCollection.doc(transaksiDocId).update({
+                todoCollection.doc(transactionDocId).update({
                   'isComplete': !todo.isComplete,
                 });
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete),
+              icon: Icon(Icons.delete),
               onPressed: () {
                 deleteTodo();
               },
@@ -133,6 +135,33 @@ class ItemList extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class ChecklistButton extends StatefulWidget {
+  const ChecklistButton({super.key});
+
+  @override
+  State<ChecklistButton> createState() => _ChecklistButtonState();
+}
+
+class _ChecklistButtonState extends State<ChecklistButton> {
+  bool isChecked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(
+        isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+        color: isChecked ? Colors.blue : Colors.grey,
+        size: 25,
+      ),
+      onPressed: () {
+        setState(() {
+          isChecked = !isChecked;
+        });
+      },
     );
   }
 }
